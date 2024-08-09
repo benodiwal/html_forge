@@ -19,6 +19,11 @@ impl Parser {
 
     fn parse_node(&mut self) -> Result<Node, ParseError> {
         self.consume_whitespace();
+        
+        if self.eof() {
+            return Err(ParseError::UnexpectedEOF);
+        }
+
         if self.starts_with("<") {
             self.parse_element()
         } else {
@@ -28,6 +33,7 @@ impl Parser {
 
     fn parse_element(&mut self) -> Result<Node, ParseError> {
         self.consume_char();
+
         let tag_name = self.parse_tag_name();
         let attributes = self.parse_attributes();
 
