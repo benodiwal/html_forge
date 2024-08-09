@@ -1,6 +1,6 @@
 #[derive(Debug, PartialEq, Clone)]
 pub enum Node {
-    Element(String),
+    Element(Element),
     Text(String),
 }
 
