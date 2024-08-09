@@ -6,7 +6,7 @@ description = "A robust and efficient HTML parsing library for Rust"
 authors = ["benodiwal <sachinbeniwal0101@gmail.com>"]
 repository = "https://github.com/benodiwal/html_forge"
 license = "MIT"
-readme = "readme"
+readme = "README"
 keywords = ["html", "dom", "parser"]
 categories = ["parsing", "web-programming"]
 
