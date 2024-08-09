@@ -24,11 +24,20 @@ impl Parser {
             return Err(ParseError::UnexpectedEOF);
         }
 
-        if self.starts_with("<") {
+        if self.starts_with("<!--") {
+            self.parse_comment()
+        } else if self.starts_with("<") {
             self.parse_element()
         } else {
             self.parse_text()
         }
+    }
+
+    fn parse_comment(&mut self) -> Result<Node, ParseError> {
+        self.consume_string("<!--")?;
+        let content = self.consume_while_sp(|parser| !parser.starts_with("-->"));
+        self.consume_string("-->")?;
+        Ok(Node::Comment(content))
     }
 
     fn parse_element(&mut self) -> Result<Node, ParseError> {
@@ -122,12 +131,32 @@ impl Parser {
         result
     }
 
+    fn consume_while_sp<F>(&mut self, mut test: F) -> String
+    where
+       F: FnMut(&Self) -> bool,
+    {
+        let mut result = String::new();
+        while !self.eof() && test(self) {
+            result.push(self.consume_char());
+        }
+        result
+    }
+
     fn consume_char(&mut self) -> char {
         let mut iter = self.input[self.position..].char_indices();
         let (_, cur_char) = iter.next().unwrap();
         let (next_pos, _) = iter.next().unwrap_or((1, ' '));
         self.position += next_pos;
         cur_char
+    }
+
+    fn consume_string(&mut self, s: &str) -> Result<(), ParseError> {
+        if self.input[self.position..].starts_with(s) {
+            self.position += s.len();
+            Ok(())
+        } else {
+            Err(ParseError::InvalidTag)
+        }
     }
 
     fn next_char(&self) -> char {
@@ -250,6 +279,34 @@ mod tests {
             }
             _ => panic!("Expected a self-closing img element"),
         }
+    }
+
+       #[test]
+    fn test_parse_comment_simple() {
+        let input = "<!-- This is a comment -->".to_string();
+        let mut parser = Parser::new(input);
+
+        match parser.parse_comment() {
+            Ok(Node::Comment(content)) => {
+                assert_eq!(content, " This is a comment ");
+            }
+            _ => panic!("Expected a comment node"),
+        }
+    }
+
+     #[test]
+    fn test_parse_comment_with_extra_text() {
+        let input = "<!-- This is a comment --> Extra text".to_string();
+        let mut parser = Parser::new(input);
+
+        match parser.parse_comment() {
+            Ok(Node::Comment(content)) => {
+                assert_eq!(content, " This is a comment ");
+            }
+            _ => panic!("Expected a comment node followed by extra text"),
+        }
+
+        assert!(parser.starts_with(" Extra text"));
     }
 
 }

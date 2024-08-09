@@ -2,6 +2,7 @@
 pub enum Node {
     Element(Element),
     Text(String),
+    Comment(String),
 }
 
 #[derive(Debug, PartialEq, Clone)]
