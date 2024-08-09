@@ -18,5 +18,13 @@ impl Element {
             attributes: Vec::new(),
             children: Vec::new(),            
         }
-    }   
+    }
+
+    pub fn with_attributes(tag_name: String, attributes: Vec<(String, String)>) -> Self {
+        Element {
+            tag_name,
+            attributes,
+            children: Vec::new()
+        }
+    } 
 }

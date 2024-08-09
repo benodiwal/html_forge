@@ -5,7 +5,7 @@ use std::error::Error;
 pub enum ParseError {
     InvalidTag,
     UnexpectedEOF,
-    MismatchedClosingTag,
+    MismatchedClosingTag
 }
 
 impl fmt::Display for ParseError {

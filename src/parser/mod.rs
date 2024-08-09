@@ -17,7 +17,7 @@ impl Parser {
         self.parse_node()
     }
 
-    fn parse_node(&mut self) -> Result<Node, ParseError> {   
+    fn parse_node(&mut self) -> Result<Node, ParseError> {
         self.consume_whitespace();
         if self.starts_with("<") {
             self.parse_element()
@@ -30,7 +30,16 @@ impl Parser {
         self.consume_char();
         let tag_name = self.parse_tag_name();
         let attributes = self.parse_attributes();
-        self.consume_char();
+
+        if self.starts_with("/>") {
+            self.consume_char();
+            self.consume_char();
+            return Ok(Node::Element(
+                Element::with_attributes(tag_name, attributes)
+            ));
+        } else {
+            self.consume_char();
+        }
 
         let mut element = Element::new(tag_name.clone());
         element.attributes = attributes;
@@ -40,9 +49,13 @@ impl Parser {
             if self.starts_with("</") {
                 break;
             }
+            if self.eof() {
+                return Err(ParseError::UnexpectedEOF);
+            }
             let child = self.parse_node()?;
             element.children.push(child);
         }
+
         self.consume_char();
         self.consume_char();
         let closing_tag_name = self.parse_tag_name();
@@ -67,7 +80,7 @@ impl Parser {
         let mut attributes = Vec::new();
         loop {
             self.consume_whitespace();
-            if self.next_char() == '>' {
+            if self.next_char() == '>' || self.next_char() == '/' {
                 break;
             }
             let name = self.parse_tag_name();
@@ -232,4 +245,5 @@ mod tests {
             _ => panic!("Expected a self-closing img element"),
         }
     }
+
 }
