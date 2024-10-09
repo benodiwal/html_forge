@@ -3,9 +3,10 @@ use std::error::Error;
 
 #[derive(Debug)]
 pub enum ParseError {
-    InvalidTag,
     UnexpectedEOF,
-    MismatchedClosingTag
+    MismatchedClosingTag,
+    InvalidTag,
+    InvalidAttributeValue,
 }
 
 impl fmt::Display for ParseError {
@@ -13,7 +14,8 @@ impl fmt::Display for ParseError {
         match self {
             ParseError::InvalidTag => write!(f, "Invalid HTML tag"),
             ParseError::UnexpectedEOF => write!(f, "Unexpected end of file"),
-            ParseError::MismatchedClosingTag => write!(f, "Mismatched closing tag")
+            ParseError::MismatchedClosingTag => write!(f, "Mismatched closing tag"),
+            ParseError::InvalidAttributeValue => write!(f, "Invalid attribute value"),
         }
     }
 }
