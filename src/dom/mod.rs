@@ -17,7 +17,7 @@ impl Element {
         Element {
             tag_name,
             attributes: Vec::new(),
-            children: Vec::new(),            
+            children: Vec::new(),
         }
     }
 
@@ -25,7 +25,7 @@ impl Element {
         Element {
             tag_name,
             attributes,
-            children: Vec::new()
+            children: Vec::new(),
         }
-    } 
+    }
 }

@@ -1,0 +1,25 @@
+name: "Format And test"
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  format_and_test:
+    name: Format and run tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: setup toolchain
+        uses: hecrj/setup-rust-action@v1
+        with:
+          rust-version: stable
+
+      - name: cargo test
+        run: cargo test
+
+      - name: rustfmt
+        run: cargo fmt --all -- --check
