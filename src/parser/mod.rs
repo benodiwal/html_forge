@@ -1,16 +1,16 @@
-use crate::{dom::{Element, Node}, errors::ParseError};
+use crate::{
+    dom::{Element, Node},
+    errors::ParseError,
+};
 
 pub struct Parser {
     input: String,
-    position: usize
+    position: usize,
 }
 
 impl Parser {
     pub fn new(input: String) -> Self {
-        Parser {
-            input,
-            position: 0,
-        }
+        Parser { input, position: 0 }
     }
 
     pub fn parse(&mut self) -> Result<Node, ParseError> {
@@ -19,7 +19,7 @@ impl Parser {
 
     fn parse_node(&mut self) -> Result<Node, ParseError> {
         self.consume_whitespace();
-        
+
         if self.eof() {
             return Err(ParseError::UnexpectedEOF);
         }
@@ -44,14 +44,14 @@ impl Parser {
         self.consume_char();
 
         let tag_name = self.parse_tag_name();
-        let attributes = self.parse_attributes();
+        let attributes = self.parse_attributes()?;
 
         if self.starts_with("/>") {
             self.consume_char();
             self.consume_char();
-            return Ok(Node::Element(
-                Element::with_attributes(tag_name, attributes)
-            ));
+            return Ok(Node::Element(Element::with_attributes(
+                tag_name, attributes,
+            )));
         } else {
             self.consume_char();
         }
@@ -91,7 +91,7 @@ impl Parser {
         self.consume_while(|c| c.is_alphanumeric())
     }
 
-    fn parse_attributes(&mut self) -> Vec<(String, String)> {
+    fn parse_attributes(&mut self) -> Result<Vec<(String, String)>, ParseError> {
         let mut attributes = Vec::new();
         loop {
             self.consume_whitespace();
@@ -100,20 +100,20 @@ impl Parser {
             }
             let name = self.parse_tag_name();
             self.consume_char();
-            let value = self.parse_attribute_value();
+            let value = self.parse_attribute_value()?;
             attributes.push((name, value));
         }
-        attributes
+        Ok(attributes)
     }
 
-    fn parse_attribute_value(&mut self) -> String {
+    fn parse_attribute_value(&mut self) -> Result<String, ParseError> {
         let quote = self.consume_char();
         if quote != '"' && quote != '\'' {
-            panic!("Invalid attribute value")
+            return Err(ParseError::InvalidAttributeValue);
         }
         let value = self.consume_while(|c| c != quote);
         self.consume_char();
-        value
+        Ok(value)
     }
 
     fn consume_whitespace(&mut self) {
@@ -122,7 +122,7 @@ impl Parser {
 
     fn consume_while<F>(&mut self, test: F) -> String
     where
-       F: Fn(char) -> bool,
+        F: Fn(char) -> bool,
     {
         let mut result = String::new();
         while !self.eof() && test(self.next_char()) {
@@ -133,7 +133,7 @@ impl Parser {
 
     fn consume_while_sp<F>(&mut self, mut test: F) -> String
     where
-       F: FnMut(&Self) -> bool,
+        F: FnMut(&Self) -> bool,
     {
         let mut result = String::new();
         while !self.eof() && test(self) {
@@ -163,7 +163,6 @@ impl Parser {
         self.input[self.position..].chars().next().unwrap()
     }
 
-
     fn starts_with(&self, s: &str) -> bool {
         self.input[self.position..].starts_with(s)
     }
@@ -172,7 +171,6 @@ impl Parser {
         self.position >= self.input.len()
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -184,7 +182,7 @@ mod tests {
     fn test_parse_valid_single_element() {
         let input = "<div></div>".to_string();
         let mut parser = Parser::new(input);
-        
+
         match parser.parse() {
             Ok(Node::Element(element)) => {
                 assert_eq!(element.tag_name, "div");
@@ -198,7 +196,7 @@ mod tests {
     fn test_parse_valid_nested_elements() {
         let input = "<div><p></p></div>".to_string();
         let mut parser = Parser::new(input);
-        
+
         match parser.parse() {
             Ok(Node::Element(element)) => {
                 assert_eq!(element.tag_name, "div");
@@ -218,7 +216,7 @@ mod tests {
     fn test_parse_text_node() {
         let input = "Hello, world!".to_string();
         let mut parser = Parser::new(input);
-        
+
         match parser.parse() {
             Ok(Node::Text(text)) => {
                 assert_eq!(text, "Hello, world!");
@@ -231,7 +229,7 @@ mod tests {
     fn test_mismatched_closing_tag() {
         let input = "<div><p></div></p>".to_string();
         let mut parser = Parser::new(input);
-        
+
         match parser.parse() {
             Err(ParseError::MismatchedClosingTag) => (),
             _ => panic!("Expected MismatchedClosingTag error"),
@@ -242,7 +240,7 @@ mod tests {
     fn test_empty_input() {
         let input = "".to_string();
         let mut parser = Parser::new(input);
-        
+
         match parser.parse() {
             Err(ParseError::UnexpectedEOF) => (),
             _ => panic!("Expected UnexpectedEOF error"),
@@ -253,13 +251,19 @@ mod tests {
     fn test_parse_element_with_attributes() {
         let input = r#"<div class="container" id='main'></div>"#.to_string();
         let mut parser = Parser::new(input);
-        
+
         match parser.parse() {
             Ok(Node::Element(element)) => {
                 assert_eq!(element.tag_name, "div");
                 assert_eq!(element.attributes.len(), 2);
-                assert_eq!(element.attributes[0], ("class".to_string(), "container".to_string()));
-                assert_eq!(element.attributes[1], ("id".to_string(), "main".to_string()));
+                assert_eq!(
+                    element.attributes[0],
+                    ("class".to_string(), "container".to_string())
+                );
+                assert_eq!(
+                    element.attributes[1],
+                    ("id".to_string(), "main".to_string())
+                );
             }
             _ => panic!("Expected a div element with attributes"),
         }
@@ -269,19 +273,22 @@ mod tests {
     fn test_parse_self_closing_element() {
         let input = "<img src='image.jpg' />".to_string();
         let mut parser = Parser::new(input);
-        
+
         match parser.parse() {
             Ok(Node::Element(element)) => {
                 assert_eq!(element.tag_name, "img");
                 assert_eq!(element.attributes.len(), 1);
-                assert_eq!(element.attributes[0], ("src".to_string(), "image.jpg".to_string()));
+                assert_eq!(
+                    element.attributes[0],
+                    ("src".to_string(), "image.jpg".to_string())
+                );
                 assert!(element.children.is_empty());
             }
             _ => panic!("Expected a self-closing img element"),
         }
     }
 
-       #[test]
+    #[test]
     fn test_parse_comment_simple() {
         let input = "<!-- This is a comment -->".to_string();
         let mut parser = Parser::new(input);
@@ -294,7 +301,7 @@ mod tests {
         }
     }
 
-     #[test]
+    #[test]
     fn test_parse_comment_with_extra_text() {
         let input = "<!-- This is a comment --> Extra text".to_string();
         let mut parser = Parser::new(input);
@@ -309,4 +316,14 @@ mod tests {
         assert!(parser.starts_with(" Extra text"));
     }
 
+    #[test]
+    fn test_invalid_attribute_value() {
+        let input = "<div class=container></div>".to_string();
+        let mut parser = Parser::new(input);
+
+        match parser.parse() {
+            Err(ParseError::InvalidAttributeValue) => (),
+            _ => panic!("Expected InvalidAttributeValue error"),
+        }
+    }
 }
